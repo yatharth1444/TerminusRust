@@ -1,10 +1,3 @@
-// Cargo.toml dependencies:
-// [dependencies]
-// glutin = "0.30"
-// nix = "0.26"
-// lazy_static = "1.4"
-// winit = "0.30"
-
 use glutin::config::ConfigTemplateBuilder;
 use glutin::context::{ContextApi, ContextAttributesBuilder};
 use glutin::display::{Display, DisplayApiPreference};
@@ -67,14 +60,11 @@ fn main() {
 
     let context = not_current_context.make_current(&surface).unwrap();
 
-    // Spawn shell with PTY and setup buffer shared state
     let (master_fd, _shell_pid) = spawn_shell();
 
-    // Shared buffer for shell output
     let buffer = Arc::new(Mutex::new(Vec::new()));
     let buffer_clone = buffer.clone();
 
-    // Read PTY output in separate thread
     thread::spawn(move || read_pty_output(master_fd, buffer_clone));
 
     // Main event loop
@@ -104,7 +94,6 @@ fn main() {
     });
 }
 
-// Spawn a shell in a PTY, return master_fd and child PID
 fn spawn_shell() -> (RawFd, nix::unistd::Pid) {
     let winsize = Winsize {
         ws_row: 24,
@@ -113,7 +102,6 @@ fn spawn_shell() -> (RawFd, nix::unistd::Pid) {
         ws_ypixel: 0,
     };
 
-    // SAFETY: forkpty is unsafe
     let ForkptyResult { master, fork_result } = unsafe { forkpty(Some(&winsize), None).unwrap() };
 
     match fork_result {
@@ -126,7 +114,6 @@ fn spawn_shell() -> (RawFd, nix::unistd::Pid) {
     }
 }
 
-// Read PTY output and append to buffer
 fn read_pty_output(master_fd: RawFd, buffer: Arc<Mutex<Vec<u8>>>) {
     let mut file = unsafe { std::fs::File::from_raw_fd(master_fd) };
     let mut buf = [0u8; 1024];
@@ -142,7 +129,6 @@ fn read_pty_output(master_fd: RawFd, buffer: Arc<Mutex<Vec<u8>>>) {
     }
 }
 
-// Handle key press and send chars to PTY
 fn handle_keyboard_key(key: VirtualKeyCode, master_fd: RawFd) {
     let mut file = unsafe { std::fs::File::from_raw_fd(master_fd) };
     let c = match key {
@@ -155,7 +141,6 @@ fn handle_keyboard_key(key: VirtualKeyCode, master_fd: RawFd) {
     let _ = file.write(c);
 }
 
-// Render function — for now print raw shell output to stdout
 fn render(buffer: &Vec<u8>) {
     println!("{}", String::from_utf8_lossy(buffer));
 }
